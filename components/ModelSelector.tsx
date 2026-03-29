@@ -55,15 +55,15 @@ export const AVAILABLE_MODELS: ModelOption[] = [
     }
   },
   {
-    id: "gemini-3.0-flash",
-    name: "Gemini 3.0 Flash",
+    id: "gemini-3-flash-preview",
+    name: "Gemini 3 Flash",
     description: {
       vi: "Mô hình nhanh, mạnh mẽ thế hệ 3",
       en: "Fast, powerful generation 3 model"
     }
   },
   {
-    id: "gemini-3.1-flash-lite",
+    id: "gemini-3.1-flash-lite-preview",
     name: "Gemini 3.1 Flash Lite",
     description: {
       vi: "Phiên bản nhẹ, tối ưu hóa cho tốc độ và chi phí",
