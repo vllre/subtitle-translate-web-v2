@@ -1511,9 +1511,9 @@ Yêu cầu cụ thể cho mỗi phiên bản:
                         )}
 
                         {/* Layout Container - Side by Side or Stacked */}
-                        <div className={`${layoutMode === 'sidebyside' ? 'flex gap-4' : ''}`}>
+                        <div className={`${layoutMode === 'sidebyside' ? 'flex flex-col xl:flex-row gap-4' : ''}`}>
                             {/* Left Column - File Upload, Settings and Table */}
-                            <div className={`${layoutMode === 'sidebyside' ? 'w-3/5' : 'w-full'} space-y-4`}>
+                            <div className={`${layoutMode === 'sidebyside' ? 'flex-1 min-w-0' : 'w-full'} space-y-4`}>
                                 {/* File Upload and Settings */}
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     {/* File Upload */}
@@ -1927,7 +1927,7 @@ Yêu cầu cụ thể cho mỗi phiên bản:
 
                             {/* Right Column - Video Preview (only shown in side-by-side mode or if not collapsed) */}
                             {(layoutMode === 'sidebyside' || !isPreviewCollapsed) && subtitles.length > 0 && (
-                                <div className={`${layoutMode === 'sidebyside' ? 'w-2/5' : 'w-full mt-4'}`}>
+                                <div className={`${layoutMode === 'sidebyside' ? 'w-full xl:w-[450px] shrink-0' : 'w-full mt-4'}`}>
                                     <Card className="overflow-hidden">
                                         <CardHeader className="pb-3">
                                             <div className="flex justify-between items-start">
