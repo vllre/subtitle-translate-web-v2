@@ -12,6 +12,15 @@ import OpenRouterApiKeyInput from "@/components/OpenRouterApiKeyInput";
 import ModelSelector, { AVAILABLE_MODELS, ModelOption, translations as modelTranslations } from "@/components/ModelSelector";
 import OpenRouterModelSelector from "@/components/OpenRouterModelSelector";
 import AIProviderSelector, { AIProvider } from "@/components/AIProviderSelector";
+import CustomLlmConfigForm from "@/components/CustomLlmConfigForm";
+import {
+    translateWithCustomLlmBatch,
+    loadCustomLlmConfig,
+    getCustomLlmConfig,
+    getCustomLlmApiKey,
+    isCustomLlmConfigValid,
+    CustomLlmConfig,
+} from "@/lib/customLlmApi";
 import ClientOnly from "@/components/ClientOnlyComponent";
 import BatchErrorDisplay from "@/components/BatchErrorDisplay";
 import TokenEstimatorDisplay from "@/components/TokenEstimatorDisplay";
@@ -108,6 +117,7 @@ export default function SubtitleTranslator() {
     const [openRouterApiKey, setOpenRouterApiKey] = useState<string>(getOpenRouterApiKey());
     const [openRouterModel, setOpenRouterModel] = useState<string>(getOpenRouterModel());
     const [openRouterModels, setOpenRouterModels] = useState<any[]>([]); // Store OpenRouter models for display name lookup
+    const [customLlmConfig, setCustomLlmConfig] = useState<CustomLlmConfig>(getCustomLlmConfig());
 
     // Cập nhật pauseStateRef khi isPaused thay đổi
     useEffect(() => {
@@ -187,6 +197,12 @@ export default function SubtitleTranslator() {
         }
     };
 
+    // Load custom LLM config on mount
+    useEffect(() => {
+        const cfg = loadCustomLlmConfig();
+        setCustomLlmConfig(cfg);
+    }, []);
+
     // Handle OpenRouter API key change
     const handleOpenRouterApiKeyChange = (apiKey: string) => {
         setOpenRouterApiKey(apiKey); // Set in local state
@@ -202,11 +218,11 @@ export default function SubtitleTranslator() {
     const handleAiProviderChange = (provider: AIProvider) => {
         const previousProvider = aiProvider;
         const previousModel = previousProvider === 'gemini' ? selectedModel : openRouterModel;
-        const newModel = provider === 'gemini' ? selectedModel : openRouterModel;
+        const newModel = provider === 'gemini' ? selectedModel : (provider === 'openrouter' ? openRouterModel : customLlmConfig.model);
 
-        // Track provider switch
+        // Track provider switch — cast to string since analytics accepts any string
         if (previousProvider !== provider) {
-            trackProviderSwitch(previousProvider, provider, previousModel, newModel);
+            trackProviderSwitch(previousProvider as string, provider as string, previousModel, newModel);
         }
 
         setAiProvider(provider);
@@ -242,6 +258,9 @@ export default function SubtitleTranslator() {
             // Try to find the model in the loaded OpenRouter models list
             const openRouterModelData = openRouterModels.find((m: any) => m.id === openRouterModel);
             return openRouterModelData?.name || openRouterModel || selectedModel;
+        } else if (aiProvider === 'custom') {
+            const cfg = customLlmConfig;
+            return cfg.displayName || cfg.model || 'Custom LLM';
         }
         return selectedModel;
     };
@@ -283,6 +302,11 @@ export default function SubtitleTranslator() {
         } else if (aiProvider === 'openrouter') {
             if (!openRouterApiKey) {
                 setValidationError(t('openrouter.invalid'));
+                return false;
+            }
+        } else if (aiProvider === 'custom') {
+            if (!isCustomLlmConfigValid()) {
+                setValidationError(t('customLlm.apiKeyRequired'));
                 return false;
             }
         }
@@ -460,6 +484,13 @@ export default function SubtitleTranslator() {
         } else if (aiProvider === 'openrouter') {
             // OpenRouter now supports batch translation!
             return await translateWithOpenRouterBatch(
+                texts,
+                targetLanguage,
+                prompt,
+                context
+            );
+        } else if (aiProvider === 'custom') {
+            return await translateWithCustomLlmBatch(
                 texts,
                 targetLanguage,
                 prompt,
@@ -1295,6 +1326,9 @@ export default function SubtitleTranslator() {
         } else if (aiProvider === 'openrouter' && !openRouterApiKey) {
             setValidationError(t('openrouter.invalid'));
             return [];
+        } else if (aiProvider === 'custom' && !isCustomLlmConfigValid()) {
+            setValidationError(t('customLlm.apiKeyRequired'));
+            return [];
         }
 
         try {
@@ -1354,6 +1388,19 @@ Yêu cầu cụ thể cho mỗi phiên bản:
                         suggestions.push(result.translatedText);
                     }
                 }
+            } else if (aiProvider === 'custom') {
+                // For Custom LLM, use batch translate with differentiated prompts
+                const variants = [
+                    `Translate this to ${targetLanguage} using simple, everyday language: "${originalText}"`,
+                    `Translate this to ${targetLanguage} using formal, academic language: "${originalText}"`,
+                    `Translate this to ${targetLanguage} using creative, natural expression: "${originalText}"`
+                ];
+                for (const variantPrompt of variants) {
+                    const result = await translateWithCustomLlmBatch([originalText], targetLanguage, variantPrompt);
+                    if (result[0]?.text && !result[0]?.error) {
+                        suggestions.push(result[0].text);
+                    }
+                }
             }
 
             // Nếu vẫn không tìm thấy, trả về bản dịch hiện tại
@@ -1386,7 +1433,7 @@ Yêu cầu cụ thể cho mỗi phiên bản:
     useEffect(() => {
         if (typeof window !== "undefined") {
             const savedProvider = localStorage.getItem("ai_provider") as AIProvider;
-            if (savedProvider && (savedProvider === "gemini" || savedProvider === "openrouter")) {
+            if (savedProvider && (savedProvider === "gemini" || savedProvider === "openrouter" || savedProvider === "custom")) {
                 setAiProvider(savedProvider);
             }
         }
@@ -1428,10 +1475,16 @@ Yêu cầu cụ thể cho mỗi phiên bản:
                                 onApiKeyChange={handleOpenRouterApiKeyChange}
                             />
                         )}
+
+                        {aiProvider === 'custom' && (
+                            <CustomLlmConfigForm
+                                onConfigChange={(cfg, _key) => setCustomLlmConfig(cfg)}
+                            />
+                        )}
                     </div>
                 </ClientOnly>
 
-                {((aiProvider === 'gemini' && apiKeyProvided) || (aiProvider === 'openrouter' && openRouterApiKey)) && (
+                {((aiProvider === 'gemini' && apiKeyProvided) || (aiProvider === 'openrouter' && openRouterApiKey) || (aiProvider === 'custom' && isCustomLlmConfigValid())) && (
                     <>
                         {/* Hiển thị lỗi dịch (nếu có) */}
                         {translationError && (

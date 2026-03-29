@@ -146,9 +146,9 @@ export function trackTranslateButtonClick(
   sourceLanguage: string,
   targetLanguage: string,
   subtitleCount: number,
-  aiProvider: 'gemini' | 'openrouter',
+  aiProvider: string,
   model: string,
-  modelType?: 'free' | 'paid' | 'experimental'
+  modelType?: string
 ): void {
   trackEvent('translate_button_click', {
     source: sourceLanguage,
@@ -167,10 +167,10 @@ export function trackTranslateButtonClick(
  * Theo dõi việc lựa chọn model
  */
 export function trackModelSelection(
-  aiProvider: 'gemini' | 'openrouter',
+  aiProvider: string,
   previousModel: string,
   newModel: string,
-  modelType?: 'free' | 'paid' | 'experimental'
+  modelType?: string
 ): void {
   trackEvent('model_selection', {
     ai_provider: aiProvider,
@@ -186,8 +186,8 @@ export function trackModelSelection(
  * Theo dõi việc chuyển đổi AI provider
  */
 export function trackProviderSwitch(
-  previousProvider: 'gemini' | 'openrouter',
-  newProvider: 'gemini' | 'openrouter',
+  previousProvider: string,
+  newProvider: string,
   previousModel: string,
   newModel: string
 ): void {
@@ -271,9 +271,9 @@ export function getOpenRouterModelType(
  * Tạo model key chi tiết cho analytics
  */
 export function createDetailedModelKey(
-  aiProvider: 'gemini' | 'openrouter',
+  aiProvider: string,
   modelId: string,
-  modelType: 'free' | 'paid' | 'experimental'
+  modelType: string
 ): string {
   return `${aiProvider}_${modelType}_${modelId.replace(/[^a-zA-Z0-9]/g, '_')}`;
 }

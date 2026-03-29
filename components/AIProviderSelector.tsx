@@ -4,12 +4,12 @@ import { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useI18n } from "@/lib/i18n/I18nContext";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, ExternalLink } from "lucide-react";
+import { Sparkles, ExternalLink, Server } from "lucide-react";
 
 // Storage key for localStorage
 const STORAGE_KEY = "ai_provider";
 
-export type AIProvider = "gemini" | "openrouter";
+export type AIProvider = "gemini" | "openrouter" | "custom";
 
 interface AIProviderSelectorProps {
   value: AIProvider;
@@ -24,7 +24,7 @@ export default function AIProviderSelector({ value, onProviderChange }: AIProvid
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedProvider = localStorage.getItem(STORAGE_KEY) as AIProvider;
-      if (savedProvider && (savedProvider === "gemini" || savedProvider === "openrouter")) {
+      if (savedProvider && (savedProvider === "gemini" || savedProvider === "openrouter" || savedProvider === "custom")) {
         setSelectedProvider(savedProvider);
         onProviderChange(savedProvider);
       }
@@ -54,6 +54,8 @@ export default function AIProviderSelector({ value, onProviderChange }: AIProvid
       return t('aiProvider.gemini');
     } else if (selectedProvider === "openrouter") {
       return t('aiProvider.openrouter');
+    } else if (selectedProvider === "custom") {
+      return t('aiProvider.custom');
     }
     
     return selectedProvider;
@@ -65,6 +67,8 @@ export default function AIProviderSelector({ value, onProviderChange }: AIProvid
       return <Sparkles className="h-4 w-4 text-purple-600" />;
     } else if (provider === "openrouter") {
       return <ExternalLink className="h-4 w-4 text-blue-600" />;
+    } else if (provider === "custom") {
+      return <Server className="h-4 w-4 text-violet-600" />;
     }
     return null;
   };
@@ -109,6 +113,19 @@ export default function AIProviderSelector({ value, onProviderChange }: AIProvid
               </div>
               <div className="text-xs text-muted-foreground leading-relaxed">
                 {t('aiProvider.openrouterDescription')}
+              </div>
+            </div>
+          </SelectItem>
+          <SelectItem value="custom" className="cursor-pointer py-4 px-6 min-h-[80px] flex items-start pl-12">
+            <div className="flex flex-col gap-2 w-full">
+              <div className="font-medium flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  {getProviderIcon("custom")}
+                  <span className="text-base">{t('aiProvider.custom')}</span>
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground leading-relaxed">
+                {t('aiProvider.customDescription')}
               </div>
             </div>
           </SelectItem>
