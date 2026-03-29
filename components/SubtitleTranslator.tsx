@@ -1090,7 +1090,7 @@ export default function SubtitleTranslator() {
             });
             
             // Track event
-            trackEvent('retry_subtitle_manual', { format: subtitle.format || '', count: 1 });
+            trackEvent('retry_subtitle_manual', { format: subtitleFormat || '', count: 1 });
         } catch (error) {
             console.error(`Error re-translating subtitle ${id}:`, error);
             setSubtitles((prevSubtitles: SubtitleItem[]) => {
