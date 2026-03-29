@@ -1,18 +1,21 @@
 import en from './en';
 import vi from './vi';
+import id from './id';
 
-export type Locale = 'en' | 'vi';
+export type Locale = 'en' | 'vi' | 'id';
 
 export type Translations = typeof en;
 
 export const locales: Record<Locale, Translations> = {
   en,
-  vi
+  vi,
+  id
 };
 
 export const localeNames: Record<Locale, string> = {
   en: 'English',
-  vi: 'Tiếng Việt'
+  vi: 'Tiếng Việt',
+  id: 'Bahasa Indonesia'
 };
 
 /**

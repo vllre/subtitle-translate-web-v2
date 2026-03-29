@@ -168,7 +168,7 @@ function getLanguageOutputMultiplier(targetLanguage: string): number {
 export function calculateEstimatedCost(
   tokenEstimate: TokenEstimate,
   modelId: string,
-  aiProvider: 'gemini' | 'openrouter' = 'gemini',
+  aiProvider: string = 'gemini',
   customPricing?: { inputPrice: number; outputPrice: number }
 ): number {
   // For OpenRouter: Use live pricing from API if available
@@ -220,7 +220,7 @@ export function getTranslationEstimate(
   targetLanguage: string,
   customPrompt: string,
   modelId: string,
-  aiProvider: 'gemini' | 'openrouter' = 'gemini',
+  aiProvider: string = 'gemini',
   customPricing?: { inputPrice: number; outputPrice: number }
 ): TokenEstimate & { estimatedCost: number; pricingSource: 'live' | 'fallback' | 'none' } {
   const tokenEstimate = estimateSubtitleTokens(subtitles, targetLanguage, customPrompt);

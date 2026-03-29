@@ -17,7 +17,7 @@ interface TokenEstimatorDisplayProps {
   targetLanguage: string;
   customPrompt: string;
   modelId: string;
-  aiProvider: 'gemini' | 'openrouter';
+  aiProvider: string;
   isVisible?: boolean;
 }
 
@@ -179,7 +179,7 @@ export default function TokenEstimatorDisplay({
         {/* Model Info and Pricing Details */}
         <div className="text-xs text-gray-500 dark:text-gray-400 pt-1 space-y-1">
           <div>
-            <span className="font-medium">{aiProvider === 'gemini' ? 'Gemini' : 'OpenRouter'}:</span>
+            <span className="font-medium">{aiProvider === 'gemini' ? 'Gemini' : aiProvider === 'openrouter' ? 'OpenRouter' : 'Custom LLM'}:</span>
             <span className="ml-1">{modelId}</span>
             {aiProvider === 'openrouter' && isLoadingModels && (
               <span className="ml-2 text-blue-600 dark:text-blue-400">
