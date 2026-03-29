@@ -409,15 +409,15 @@ export default function SubtitleTable({
               overflow: hidden;
             }
           `}</style>
-          <table className="w-full border-collapse text-sm">
+          <table className="w-full table-fixed border-collapse text-sm">
             <thead className="sticky top-0 z-10">
               <tr className="bg-background border-b border-border">
-                <th className="px-4 py-2 text-xs font-medium text-muted-foreground uppercase w-12 bg-muted/50 first:rounded-tl-md">{t('subtitleTable.id')}</th>
-                <th className="px-4 py-2 text-xs font-medium text-muted-foreground uppercase w-28 bg-muted/50">{t('subtitleTable.time')}</th>
-                <th className="px-4 py-2 text-xs font-medium text-muted-foreground uppercase bg-muted/50">{t('subtitleTable.originalText')}</th>
-                <th className="px-4 py-2 text-xs font-medium text-muted-foreground uppercase bg-muted/50">{t('subtitleTable.translation')}</th>
-                <th className="px-4 py-2 text-xs font-medium text-muted-foreground uppercase w-24 text-center bg-muted/50">{t('subtitleTable.status')}</th>
-                <th className="px-4 py-2 text-xs font-medium text-muted-foreground uppercase w-20 text-right bg-muted/50 last:rounded-tr-md">{t('subtitleTable.action')}</th>
+                <th className="px-2 py-2 text-left text-xs font-medium text-muted-foreground uppercase w-14 bg-muted/50 first:rounded-tl-md">{t('subtitleTable.id')}</th>
+                <th className="px-2 py-2 text-left text-xs font-medium text-muted-foreground uppercase w-28 bg-muted/50">{t('subtitleTable.time')}</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase bg-muted/50">{t('subtitleTable.originalText')}</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase bg-muted/50">{t('subtitleTable.translation')}</th>
+                <th className="px-2 py-2 text-center text-xs font-medium text-muted-foreground uppercase w-28 bg-muted/50">{t('subtitleTable.status')}</th>
+                <th className="px-2 py-2 text-right text-xs font-medium text-muted-foreground uppercase w-32 bg-muted/50 last:rounded-tr-md">{t('subtitleTable.action')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -441,38 +441,38 @@ export default function SubtitleTable({
                       ${editingId !== subtitle.id ? "cursor-pointer" : ""}
                     `}
                   >
-                    <td className="px-4 py-2 align-top text-foreground">
+                    <td className="px-2 py-2 align-top text-foreground">
                       {subtitle.id}
                       {subtitle.id % batchSize === 1 && (
                         <span className="ml-1 text-xs text-muted-foreground">B{batchIndex + 1}</span>
                       )}
                     </td>
-                    <td className="px-4 py-2 align-top text-muted-foreground text-xs whitespace-nowrap">
+                    <td className="px-2 py-2 align-top text-muted-foreground text-xs whitespace-nowrap">
                       <div>{subtitle.startTime}</div>
                       <div className="text-muted-foreground/70">↓</div>
                       <div>{subtitle.endTime}</div>
                     </td>
-                    <td className="px-4 py-2 align-top text-foreground">
+                    <td className="px-3 py-2 align-top text-foreground">
                       {editingId === subtitle.id ? (
                         <div className="space-y-2 relative">
                           <Textarea
                             value={editOriginalText}
                             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditOriginalText(e.target.value)}
-                            className="w-full min-h-[80px] max-h-[150px] text-sm custom-scrollbar"
+                            className="w-full min-h-[80px] max-h-[150px] text-sm custom-scrollbar resize-y"
                             placeholder={t('subtitleTable.originalText')}
                           />
                         </div>
                       ) : (
-                        <div className="max-w-xs whitespace-pre-wrap break-words text-sm max-h-[120px] custom-scrollbar">{subtitle.text}</div>
+                        <div className="w-full whitespace-pre-wrap break-words text-sm max-h-[120px] overflow-y-auto overflow-x-hidden custom-scrollbar">{subtitle.text}</div>
                       )}
                     </td>
-                    <td className="px-4 py-2 align-top text-foreground relative">
+                    <td className="px-3 py-2 align-top text-foreground relative">
                       {editingId === subtitle.id ? (
                         <div className="space-y-2">
                           <Textarea
                             value={editTranslatedText}
                             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditTranslatedText(e.target.value)}
-                            className="w-full min-h-[80px] max-h-[150px] text-sm custom-scrollbar"
+                            className="w-full min-h-[80px] max-h-[150px] text-sm custom-scrollbar resize-y"
                             placeholder={t('subtitleTable.translation')}
                           />
                           <div className="flex gap-2">
@@ -482,7 +482,7 @@ export default function SubtitleTable({
                         </div>
                       ) : (
                         <div 
-                          className={`max-w-xs whitespace-pre-wrap break-words max-h-[120px] custom-scrollbar ${
+                          className={`w-full whitespace-pre-wrap break-words max-h-[120px] overflow-y-auto overflow-x-hidden custom-scrollbar ${
                             subtitle.status === "error" ? "text-rose-600 dark:text-rose-400" : "text-foreground"
                           }`}
                         >
@@ -585,10 +585,10 @@ export default function SubtitleTable({
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-2 align-top text-center">
+                    <td className="px-2 py-2 align-top text-center">
                       {getStatusBadge(subtitle.status)}
                     </td>
-                    <td className="px-4 py-2 align-top text-right">
+                    <td className="px-2 py-2 align-top text-right">
                       {subtitle.status !== "translating" && editingId !== subtitle.id && (
                         <div className="flex justify-end gap-1">
                           {subtitle.status === "translated" && (
