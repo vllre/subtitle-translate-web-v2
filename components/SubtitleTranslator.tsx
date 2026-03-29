@@ -1028,14 +1028,78 @@ export default function SubtitleTranslator() {
     };
 
     // Update subtitle manually
-    const handleUpdateSubtitle = (id: number, translatedText: string) => {
-        setSubtitles(prevSubtitles =>
+    const handleUpdateSubtitle = (id: number, originalText: string, translatedText: string) => {
+        setSubtitles((prevSubtitles: SubtitleItem[]) =>
             prevSubtitles.map(sub =>
                 sub.id === id
-                    ? { ...sub, translatedText, status: "translated" }
+                    ? { ...sub, text: originalText, translatedText, status: "translated" }
                     : sub
             )
         );
+    };
+
+    // Handle re-translating a single subtitle directly
+    const handleRetranslateSingle = async (id: number) => {
+        const subtitleIndex = subtitles.findIndex(sub => sub.id === id);
+        if (subtitleIndex === -1) return;
+
+        const subtitle = subtitles[subtitleIndex];
+
+        // Proceed with translation
+        const updatedSubtitles = [...subtitles];
+        updatedSubtitles[subtitleIndex].status = "translating";
+        setSubtitles(updatedSubtitles);
+
+        try {
+            // Get a few previous subtitles for context
+            const context: { original: string; translated: string }[] = [];
+            for (let i = Math.max(0, subtitleIndex - 3); i < subtitleIndex; i++) {
+                if (updatedSubtitles[i].status === "translated" && updatedSubtitles[i].translatedText) {
+                    context.push({
+                        original: updatedSubtitles[i].text,
+                        translated: updatedSubtitles[i].translatedText
+                    });
+                }
+            }
+
+            // Create a context string
+            const contextString = context.map(c => `"${c.original}" -> "${c.translated}"`).join('\n');
+
+            // Translate this subtitle
+            const translatedResult = await translateTexts(
+                [subtitle.text],
+                targetLanguage,
+                getEffectivePrompt(),
+                contextString ? `Here are some previous translations for context:\n${contextString}` : ''
+            );
+
+            // Cập nhật kết quả
+            setSubtitles((prevSubtitles: SubtitleItem[]) => {
+                const newSubtitles = [...prevSubtitles];
+                
+                if (translatedResult[0]?.error) {
+                    newSubtitles[subtitleIndex].status = "error";
+                    newSubtitles[subtitleIndex].error = translatedResult[0].error;
+                } else {
+                    newSubtitles[subtitleIndex].status = "translated";
+                    newSubtitles[subtitleIndex].translatedText = translatedResult[0]?.text || "";
+                    newSubtitles[subtitleIndex].error = undefined;
+                }
+                
+                return newSubtitles;
+            });
+            
+            // Track event
+            trackEvent('retry_subtitle_manual', { format: subtitle.format || '', count: 1 });
+        } catch (error) {
+            console.error(`Error re-translating subtitle ${id}:`, error);
+            setSubtitles((prevSubtitles: SubtitleItem[]) => {
+                const newSubtitles = [...prevSubtitles];
+                newSubtitles[subtitleIndex].status = "error";
+                newSubtitles[subtitleIndex].error = error instanceof Error ? error.message : "Lost connection";
+                return newSubtitles;
+            });
+        }
     };
 
     // Làm mới danh sách các batch lỗi
@@ -1791,7 +1855,8 @@ Yêu cầu cụ thể cho mỗi phiên bản:
                                                     subtitles={subtitles}
                                                     onRetry={handleRetrySubtitle}
                                                     onRetryBatch={handleRetryBatch}
-                                                    onUpdateTranslation={handleUpdateSubtitle}
+                                                    onUpdateSubtitle={handleUpdateSubtitle}
+                                                    onRetranslateSingle={handleRetranslateSingle}
                                                     translating={translating}
                                                     batchSize={BATCH_SIZE}
                                                     highlightedSubtitleId={currentPlayingSubtitleId}

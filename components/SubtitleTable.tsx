@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { SubtitleItem } from "@/components/SubtitleTranslator";
 import ApiErrorDisplay from "@/components/ApiErrorDisplay";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,9 @@ interface SubtitleTableProps {
   subtitles: SubtitleItem[];
   onRetry: (id: number) => void;
   onRetryBatch?: (batchIndex: number) => Promise<void>;
-  onUpdateTranslation: (id: number, translatedText: string) => void;
+  onUpdateTranslation?: (id: number, translatedText: string) => void; // Kept for backwards compatibility
+  onUpdateSubtitle?: (id: number, originalText: string, translatedText: string) => void;
+  onRetranslateSingle?: (id: number) => void;
   translating: boolean;
   batchSize?: number;
   highlightedSubtitleId?: number | null;
@@ -30,6 +32,8 @@ export default function SubtitleTable({
   onRetry,
   onRetryBatch,
   onUpdateTranslation,
+  onUpdateSubtitle,
+  onRetranslateSingle,
   translating,
   batchSize = 10,
   highlightedSubtitleId,
@@ -37,7 +41,8 @@ export default function SubtitleTable({
 }: SubtitleTableProps) {
   const { t } = useI18n();
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editText, setEditText] = useState<string>("");
+  const [editOriginalText, setEditOriginalText] = useState<string>("");
+  const [editTranslatedText, setEditTranslatedText] = useState<string>("");
   const [retryingBatch, setRetryingBatch] = useState<number | null>(null);
   const [expandedTable, setExpandedTable] = useState<boolean>(false);
   const highlightedRowRef = useRef<HTMLTableRowElement>(null);
@@ -129,22 +134,29 @@ export default function SubtitleTable({
   }, [subtitles, batchSize]);
 
   // Start editing a subtitle
-  const handleEdit = (id: number, text: string) => {
+  const handleEdit = (id: number, originalText: string, translatedText: string) => {
     setEditingId(id);
-    setEditText(text);
+    setEditOriginalText(originalText);
+    setEditTranslatedText(translatedText);
   };
 
   // Save edited subtitle
   const handleSave = (id: number) => {
-    onUpdateTranslation(id, editText);
+    if (onUpdateSubtitle) {
+      onUpdateSubtitle(id, editOriginalText, editTranslatedText);
+    } else if (onUpdateTranslation) {
+      onUpdateTranslation(id, editTranslatedText);
+    }
     setEditingId(null);
-    setEditText("");
+    setEditOriginalText("");
+    setEditTranslatedText("");
   };
 
   // Cancel editing
   const handleCancel = () => {
     setEditingId(null);
-    setEditText("");
+    setEditOriginalText("");
+    setEditTranslatedText("");
   };
 
   // Retry a batch
@@ -261,7 +273,16 @@ export default function SubtitleTable({
   const applyTranslationSuggestion = (suggestion: string) => {
     if (suggestingId === null) return;
     
-    onUpdateTranslation(suggestingId, suggestion);
+    // Tìm subtitle để lấy original text
+    const subtitle = subtitles.find(s => s.id === suggestingId);
+    if (!subtitle) return;
+    
+    if (onUpdateSubtitle) {
+      onUpdateSubtitle(suggestingId, subtitle.text, suggestion);
+    } else if (onUpdateTranslation) {
+      onUpdateTranslation(suggestingId, suggestion);
+    }
+    
     closeSuggestions();
   };
   
@@ -432,15 +453,27 @@ export default function SubtitleTable({
                       <div>{subtitle.endTime}</div>
                     </td>
                     <td className="px-4 py-2 align-top text-foreground">
-                      <div className="max-w-xs whitespace-pre-wrap break-words text-sm max-h-[120px] custom-scrollbar">{subtitle.text}</div>
+                      {editingId === subtitle.id ? (
+                        <div className="space-y-2 relative">
+                          <Textarea
+                            value={editOriginalText}
+                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditOriginalText(e.target.value)}
+                            className="w-full min-h-[80px] max-h-[150px] text-sm custom-scrollbar"
+                            placeholder={t('subtitleTable.originalText')}
+                          />
+                        </div>
+                      ) : (
+                        <div className="max-w-xs whitespace-pre-wrap break-words text-sm max-h-[120px] custom-scrollbar">{subtitle.text}</div>
+                      )}
                     </td>
                     <td className="px-4 py-2 align-top text-foreground relative">
                       {editingId === subtitle.id ? (
                         <div className="space-y-2">
                           <Textarea
-                            value={editText}
-                            onChange={(e) => setEditText(e.target.value)}
+                            value={editTranslatedText}
+                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditTranslatedText(e.target.value)}
                             className="w-full min-h-[80px] max-h-[150px] text-sm custom-scrollbar"
+                            placeholder={t('subtitleTable.translation')}
                           />
                           <div className="flex gap-2">
                             <Button size="sm" onClick={() => handleSave(subtitle.id)}>{t('common.save')}</Button>
@@ -563,7 +596,7 @@ export default function SubtitleTable({
                               <Button 
                                 size="icon"
                                 variant="ghost"
-                                onClick={() => handleEdit(subtitle.id, subtitle.translatedText)}
+                                onClick={() => handleEdit(subtitle.id, subtitle.text, subtitle.translatedText || '')}
                                 disabled={translating}
                                 className="h-7 w-7 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/50"
                                 title={t('common.edit')}
@@ -571,14 +604,31 @@ export default function SubtitleTable({
                                 <Edit className="h-3.5 w-3.5" />
                               </Button>
                               
+                              {/* Nút dịch lại từng dòng */}
+                              {subtitle.status === "translated" && onRetranslateSingle && (
+                                <Button 
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                                    e.stopPropagation();
+                                    onRetranslateSingle(subtitle.id);
+                                  }}
+                                  disabled={translating}
+                                  className="h-7 w-7 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/50"
+                                  title="Translate again"
+                                >
+                                  <RotateCw className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                              
                               {/* Nút gợi ý bản dịch từ AI */}
                               {onSuggestTranslation && (
                                 <Button 
                                   size="icon"
                                   variant="ghost"
-                                  onClick={(e) => {
+                                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                                     e.stopPropagation();
-                                    handleSuggestTranslation(subtitle.id, subtitle.text, subtitle.translatedText);
+                                    handleSuggestTranslation(subtitle.id, subtitle.text, subtitle.translatedText || '');
                                   }}
                                   disabled={translating || loadingSuggestions}
                                   className="h-7 w-7 text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/50"
