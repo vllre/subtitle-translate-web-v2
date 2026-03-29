@@ -1830,99 +1830,7 @@ Yêu cầu cụ thể cho mỗi phiên bản:
                                     />
                                 )}
 
-                                {/* Subtitle Table */}
-                                <Card>
-                                    <CardHeader className="pb-3">
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <CardTitle>{t('subtitleTable.title')}</CardTitle>
-                                                <CardDescription>{t('subtitleTable.description')}</CardDescription>
-                                            </div>
-                                            {subtitles.length > 0 && (
-                                                <div className="flex gap-2">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => setShowTokenEstimate(!showTokenEstimate)}
-                                                        className="flex items-center gap-1"
-                                                    >
-                                                        {showTokenEstimate ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                                        {showTokenEstimate ? t('tokenEstimate.hide') : t('tokenEstimate.show')}
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                        onClick={() => setIsSubtitleTableCollapsed(!isSubtitleTableCollapsed)}
-                                                    >
-                                                        {isSubtitleTableCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-                                                    </Button>
-                                                    <div className="flex flex-col gap-2">
-                                                        {/* Format selection */}
-                                                        <div className="flex items-center gap-2">
-                                                            <label className="text-xs text-gray-500 dark:text-gray-400">{t('export.exportFormat')}</label>
-                                                            <select
-                                                                value={exportFormat}
-                                                                onChange={(e) => setExportFormat(e.target.value as SubtitleFormat | 'original')}
-                                                                className="text-xs border rounded px-1 py-0.5 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                                disabled={!subtitles.some(s => s.status === "translated")}
-                                                            >
-                                                                <option value="original">{t('export.keepOriginalFormat')} ({subtitleFormat.toUpperCase()})</option>
-                                                                <option value="srt">SRT</option>
-                                                                <option value="vtt">WebVTT</option>
-                                                                <option value="ass">ASS</option>
-                                                            </select>
-                                                        </div>
-
-                                                        {/* Export buttons */}
-                                                        <div className="flex flex-wrap gap-2">
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={handleExport}
-                                                                disabled={!subtitles.some(s => s.status === "translated")}
-                                                                title={t('export.exportTranslated')}
-                                                            >
-                                                                {t('export.exportTranslated')}
-                                                            </Button>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={handleExportBilingual}
-                                                                disabled={!subtitles.some(s => s.status === "translated")}
-                                                                title={t('export.bilingualDescription')}
-                                                                className="whitespace-nowrap"
-                                                            >
-                                                                {t('export.exportBilingual')}
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </CardHeader>
-                                    {!isSubtitleTableCollapsed && (
-                                        <CardContent>
-                                            {subtitles.length > 0 ? (
-                                                <SubtitleTable
-                                                    subtitles={subtitles}
-                                                    onRetry={handleRetrySubtitle}
-                                                    onRetryBatch={handleRetryBatch}
-                                                    onUpdateSubtitle={handleUpdateSubtitle}
-                                                    onRetranslateSingle={handleRetranslateSingle}
-                                                    translating={translating}
-                                                    batchSize={BATCH_SIZE}
-                                                    highlightedSubtitleId={currentPlayingSubtitleId}
-                                                    onSuggestTranslation={handleSuggestBetterTranslation}
-                                                />
-                                            ) : (
-                                                <div className="text-center py-10 text-gray-500">
-                                                    {t('fileUpload.noFileSelected')}
-                                                </div>
-                                            )}
-                                        </CardContent>
-                                    )}
-                                </Card>
+                                {/* Subtitle Table has been moved below the layout container */}
                             </div>
 
                             {/* Right Column - Video Preview (only shown in side-by-side mode or if not collapsed) */}
@@ -1974,6 +1882,102 @@ Yêu cầu cụ thể cho mỗi phiên bản:
                                     </Button>
                                 </div>
                             )}
+                        </div>
+
+                        {/* Subtitle Table */}
+                        <div className="w-full mt-4">
+                            <Card>
+                                <CardHeader className="pb-3">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <CardTitle>{t('subtitleTable.title')}</CardTitle>
+                                            <CardDescription>{t('subtitleTable.description')}</CardDescription>
+                                        </div>
+                                        {subtitles.length > 0 && (
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => setShowTokenEstimate(!showTokenEstimate)}
+                                                    className="flex items-center gap-1"
+                                                >
+                                                    {showTokenEstimate ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                                    {showTokenEstimate ? t('tokenEstimate.hide') : t('tokenEstimate.show')}
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8"
+                                                    onClick={() => setIsSubtitleTableCollapsed(!isSubtitleTableCollapsed)}
+                                                >
+                                                    {isSubtitleTableCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                                                </Button>
+                                                <div className="flex flex-col gap-2">
+                                                    {/* Format selection */}
+                                                    <div className="flex items-center gap-2">
+                                                        <label className="text-xs text-gray-500 dark:text-gray-400">{t('export.exportFormat')}</label>
+                                                        <select
+                                                            value={exportFormat}
+                                                            onChange={(e: any) => setExportFormat(e.target.value as SubtitleFormat | 'original')}
+                                                            className="text-xs border rounded px-1 py-0.5 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            disabled={!subtitles.some((s: any) => s.status === "translated")}
+                                                        >
+                                                            <option value="original">{t('export.keepOriginalFormat')} ({subtitleFormat.toUpperCase()})</option>
+                                                            <option value="srt">SRT</option>
+                                                            <option value="vtt">WebVTT</option>
+                                                            <option value="ass">ASS</option>
+                                                        </select>
+                                                    </div>
+
+                                                    {/* Export buttons */}
+                                                    <div className="flex flex-wrap gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={handleExport}
+                                                            disabled={!subtitles.some((s: any) => s.status === "translated")}
+                                                            title={t('export.exportTranslated')}
+                                                        >
+                                                            {t('export.exportTranslated')}
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={handleExportBilingual}
+                                                            disabled={!subtitles.some((s: any) => s.status === "translated")}
+                                                            title={t('export.bilingualDescription')}
+                                                            className="whitespace-nowrap"
+                                                        >
+                                                            {t('export.exportBilingual')}
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </CardHeader>
+                                {!isSubtitleTableCollapsed && (
+                                    <CardContent>
+                                        {subtitles.length > 0 ? (
+                                            <SubtitleTable
+                                                subtitles={subtitles}
+                                                onRetry={handleRetrySubtitle}
+                                                onRetryBatch={handleRetryBatch}
+                                                onUpdateSubtitle={handleUpdateSubtitle}
+                                                onRetranslateSingle={handleRetranslateSingle}
+                                                translating={translating}
+                                                batchSize={BATCH_SIZE}
+                                                highlightedSubtitleId={currentPlayingSubtitleId}
+                                                onSuggestTranslation={handleSuggestBetterTranslation}
+                                            />
+                                        ) : (
+                                            <div className="text-center py-10 text-gray-500">
+                                                {t('fileUpload.noFileSelected')}
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                )}
+                            </Card>
                         </div>
                     </>
                 )}

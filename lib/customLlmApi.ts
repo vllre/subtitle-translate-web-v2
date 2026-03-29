@@ -200,15 +200,35 @@ export async function translateWithCustomLlmBatch(
       });
 
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        // Redact any key-like value from the error message before surfacing it
-        const rawMsg: string =
-          errData?.error?.message ||
-          `Custom LLM API error: ${response.status} ${response.statusText}`;
+        const rawText = await response.text().catch(() => "");
+        let rawMsg: string;
+        if (rawText.trimStart().toLowerCase().startsWith("<!doctype") || rawText.trimStart().startsWith("<html")) {
+          rawMsg = `HTTP ${response.status}: The server returned an HTML page — check your API Base URL (add /v1 if needed).`;
+        } else {
+          try {
+            const errData = JSON.parse(rawText);
+            rawMsg = errData?.error?.message || `HTTP ${response.status} ${response.statusText}`;
+          } catch {
+            rawMsg = `HTTP ${response.status} ${response.statusText}`;
+          }
+        }
         return texts.map(() => ({ text: "", error: rawMsg }));
       }
 
-      const data = await response.json();
+      const successText = await response.text().catch(() => "");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let data: any;
+      try {
+        data = JSON.parse(successText);
+      } catch {
+        if (successText.trimStart().toLowerCase().startsWith("<!doctype") || successText.trimStart().startsWith("<html")) {
+          return texts.map(() => ({
+            text: "",
+            error: "Server returned HTML instead of JSON — check your API Base URL (add /v1 if needed).",
+          }));
+        }
+        return texts.map(() => ({ text: "", error: "Invalid JSON response from Custom LLM server" }));
+      }
 
       // OpenAI-compatible response
       let responseText: string | undefined;
@@ -352,11 +372,16 @@ export async function testCustomLlmConnection(): Promise<CustomLlmTestResult> {
     });
 
     if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      const rawMsg: string =
-        errData?.error?.message ||
-        `HTTP ${response.status} ${response.statusText}`;
-      return { success: false, error: rawMsg };
+      const rawText = await response.text().catch(() => "");
+      if (rawText.trimStart().toLowerCase().startsWith("<!doctype") || rawText.trimStart().startsWith("<html")) {
+        return { success: false, error: `HTTP ${response.status}: Server returned HTML — check your API Base URL (add /v1 if needed).` };
+      }
+      try {
+        const errData = JSON.parse(rawText);
+        return { success: false, error: errData?.error?.message || `HTTP ${response.status} ${response.statusText}` };
+      } catch {
+        return { success: false, error: `HTTP ${response.status} ${response.statusText}` };
+      }
     }
 
     return { success: true };
