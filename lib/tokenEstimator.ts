@@ -52,6 +52,8 @@ export const PROVIDER_PRICING: Record<string, ProviderPricing> = {
   'gemini-2.0-flash-exp': { inputPrice: 0.075, outputPrice: 0.3 },
   'gemini-exp-1121': { inputPrice: 1.25, outputPrice: 5.0 },
   'gemini-exp-1206': { inputPrice: 1.25, outputPrice: 5.0 },
+  'gemini-3.0-flash': { inputPrice: 0.075, outputPrice: 0.3 },
+  'gemini-3.1-flash-lite': { inputPrice: 0.075, outputPrice: 0.3 },
   
   // OpenRouter fallback pricing (will be overridden by live API data when available)
   'openai/gpt-4o': { inputPrice: 2.5, outputPrice: 10.0 },
