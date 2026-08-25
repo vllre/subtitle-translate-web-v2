@@ -39,8 +39,8 @@ export const AVAILABLE_MODELS: ModelOption[] = [
     }
   },
   {
-    id: "gemini-2.0-flash",
-    name: "Gemini 2.0 Flash",
+    id: "gemini-3.6-flash",
+    name: "Gemini 3.6 Flash",
     description: {
       vi: "Hiệu suất nhanh và cân bằng, phù hợp cho dịch thuật thông thường",
       en: "Fast and balanced performance, suitable for routine translations"
@@ -89,7 +89,7 @@ export const AVAILABLE_MODELS: ModelOption[] = [
 ];
 
 // Default model - sử dụng model miễn phí làm mặc định
-export const DEFAULT_MODEL = "gemini-2.0-flash";
+export const DEFAULT_MODEL = "gemini-3.6-flash";
 
 interface ModelSelectorProps {
   onModelChange: (modelId: string) => void;

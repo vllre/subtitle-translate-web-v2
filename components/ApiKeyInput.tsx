@@ -50,8 +50,8 @@ export default function ApiKeyInput({ onApiKeyChange }: ApiKeyInputProps) {
     try {
       const { GoogleGenerativeAI } = await import("@google/generative-ai");
       const genAI = new GoogleGenerativeAI(key);
-      // Sử dụng model gemini-2.0-flash để kiểm tra API key
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+      // Sử dụng model gemini-3.6-flash để kiểm tra API key
+      const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
 
       // Gửi một prompt đơn giản để kiểm tra key có hoạt động không
       const result = await model.generateContent("Hello, test");
