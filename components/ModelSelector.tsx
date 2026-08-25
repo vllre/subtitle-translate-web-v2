@@ -71,6 +71,14 @@ export const AVAILABLE_MODELS: ModelOption[] = [
     }
   },
   {
+    id: "gemini-3.5-flash",
+    name: "Gemini 3.5 Flash",
+    description: {
+      vi: "Flash thế hệ 3.5, tốc độ cao với chất lượng vượt trội",
+      en: "Generation 3.5 Flash, high speed with superior quality"
+    }
+  },
+  {
     id: "gemma-3-27b-it",
     name: "Gemma 3 27B",
     description: {
@@ -81,7 +89,7 @@ export const AVAILABLE_MODELS: ModelOption[] = [
 ];
 
 // Default model - sử dụng model miễn phí làm mặc định
-export const DEFAULT_MODEL = "gemma-3-27b-it";
+export const DEFAULT_MODEL = "gemini-2.0-flash";
 
 interface ModelSelectorProps {
   onModelChange: (modelId: string) => void;
