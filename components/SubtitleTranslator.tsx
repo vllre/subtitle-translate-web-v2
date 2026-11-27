@@ -29,7 +29,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { saveAs } from "file-saver";
-import { ChevronDown, ChevronUp, Globe, AlertCircle, PauseCircle, PlayCircle, StopCircle, X, Maximize, Minimize, Eye, EyeOff } from "lucide-react";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { ChevronDown, ChevronUp, Globe, AlertCircle, PauseCircle, PlayCircle, StopCircle, X, Maximize, Minimize, Eye, EyeOff, Zap } from "lucide-react";
 import { useI18n } from "@/lib/i18n/I18nContext";
 import SubtitlePreview from "@/components/SubtitlePreview";
 import {
@@ -74,6 +81,7 @@ interface ParsedSubtitle {
 
 const BATCH_SIZE = 10; // Number of subtitles to translate in a batch
 const CUSTOM_PROMPT_STORAGE_KEY = "custom_prompt"; // Storage key for custom prompt
+const BATCH_SIZE_STORAGE_KEY = "custom_batch_size"; // Storage key for selected batch size
 const MAX_BATCH_SIZE = 30; // Maximum number of subtitles in one large batch
 const RATE_LIMIT_DELAY = 2000; // Delay between batches in milliseconds
 
@@ -118,6 +126,7 @@ export default function SubtitleTranslator() {
     const [openRouterModel, setOpenRouterModel] = useState<string>(getOpenRouterModel());
     const [openRouterModels, setOpenRouterModels] = useState<any[]>([]); // Store OpenRouter models for display name lookup
     const [customLlmConfig, setCustomLlmConfig] = useState<CustomLlmConfig>(getCustomLlmConfig());
+    const [selectedBatchSize, setSelectedBatchSize] = useState<number>(30);
 
     // Cập nhật pauseStateRef khi isPaused thay đổi
     useEffect(() => {
@@ -131,6 +140,13 @@ export default function SubtitleTranslator() {
             const savedPrompt = localStorage.getItem(CUSTOM_PROMPT_STORAGE_KEY);
             if (savedPrompt) {
                 setCustomPrompt(savedPrompt);
+            }
+            const savedBatchSize = localStorage.getItem(BATCH_SIZE_STORAGE_KEY);
+            if (savedBatchSize) {
+                const parsed = parseInt(savedBatchSize, 10);
+                if (!isNaN(parsed) && parsed > 0) {
+                    setSelectedBatchSize(parsed);
+                }
             }
             // If no saved prompt, keep customPrompt empty (default state)
             setCustomPromptLoaded(true);
@@ -560,11 +576,8 @@ export default function SubtitleTranslator() {
             // Process subtitles in batches
             const newFailedBatches: { index: number; items: SubtitleItem[] }[] = [];
 
-            // Xác định kích thước batch dựa vào số lượng phụ đề
-            // Nếu có nhiều phụ đề, tăng kích thước batch để giảm số lần gọi API
-            const dynamicBatchSize = pendingSubtitles.length > 100
-                ? MAX_BATCH_SIZE // Nếu có nhiều phụ đề (>100), sử dụng batch lớn
-                : BATCH_SIZE; // Ngược lại, sử dụng kích thước batch mặc định
+            // Xác định kích thước batch dựa vào lựa chọn của người dùng
+            const dynamicBatchSize = selectedBatchSize || (pendingSubtitles.length > 100 ? MAX_BATCH_SIZE : BATCH_SIZE);
 
             console.log(`Using batch size: ${dynamicBatchSize}`);
 
@@ -1664,6 +1677,42 @@ Yêu cầu cụ thể cho mỗi phiên bản:
                                                         value={targetLanguage}
                                                         onChange={setTargetLanguage}
                                                     />
+
+                                                    {/* Batch Size Selector */}
+                                                    <div className="space-y-1.5">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <Zap className="h-3.5 w-3.5 text-amber-500" />
+                                                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                                {t('translationSettings.batchSize')}
+                                                            </label>
+                                                        </div>
+                                                        <Select
+                                                            value={selectedBatchSize.toString()}
+                                                            onValueChange={(val) => {
+                                                                const size = parseInt(val, 10);
+                                                                setSelectedBatchSize(size);
+                                                                if (typeof window !== "undefined") {
+                                                                    localStorage.setItem(BATCH_SIZE_STORAGE_KEY, val);
+                                                                }
+                                                            }}
+                                                            disabled={translating}
+                                                        >
+                                                            <SelectTrigger className="w-full">
+                                                                <SelectValue placeholder="Pilih ukuran batch" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="10">10 Subtitle / batch (Aman & Hemat Token)</SelectItem>
+                                                                <SelectItem value="20">20 Subtitle / batch (Standar)</SelectItem>
+                                                                <SelectItem value="30">30 Subtitle / batch (Cepat)</SelectItem>
+                                                                <SelectItem value="50">50 Subtitle / batch (Sangat Cepat)</SelectItem>
+                                                                <SelectItem value="100">100 Subtitle / batch (Super Cepat - Token Besar)</SelectItem>
+                                                                <SelectItem value="200">200 Subtitle / batch (Maksimum Turbo)</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                            {t('translationSettings.batchSizeDescription')}
+                                                        </p>
+                                                    </div>
 
                                                     <div className="space-y-2 md:col-span-2">
                                                         <div className="flex items-center justify-between">

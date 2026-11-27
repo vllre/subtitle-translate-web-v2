@@ -166,6 +166,8 @@ const id = {
     selectLanguage: "Pilih atau ketik bahasa",
     customPrompt: "Prompt Kustom",
     customPromptDefault: "Terjemahkan subtitle berikut ke {language}. Pertahankan nada, gaya, dan nuansa bawaan aslinya. Buat teks ini tetap ringkas untuk menyesuaikan waktu subtitlenya.",
+    batchSize: "Ukuran Batch (Subtitle per request)",
+    batchSizeDescription: "Batch lebih besar selesai jauh lebih cepat namun memerlukan token lebih banyak (10 - 200)",
     startTranslation: "Mulai Terjemahkan",
     translationInProgress: "Menerjemahkan subtitle...",
     translationPaused: "Dijeda - Tekan 'Lanjutkan' untuk memuat ulang terjemahan",

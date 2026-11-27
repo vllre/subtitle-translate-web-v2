@@ -167,6 +167,8 @@ const vi = {
     selectLanguage: "Chọn hoặc nhập ngôn ngữ",
     customPrompt: "Prompt tùy chỉnh",
     customPromptDefault: "Dịch phụ đề sau sang {language}. Giữ nguyên giọng điệu, phong cách và sắc thái ban đầu. Giữ ngắn gọn để phù hợp với thời gian phụ đề.",
+    batchSize: "Kích thước Batch (Số phụ đề mỗi lần gọi)",
+    batchSizeDescription: "Batch lớn hơn dịch nhanh hơn nhưng tốn nhiều token hơn (10 - 200)",
     startTranslation: "Bắt đầu dịch",
     translationInProgress: "Đang dịch phụ đề...",
     translationPaused: "Đã tạm dừng - Nhấn 'Tiếp tục' để tiếp tục dịch",

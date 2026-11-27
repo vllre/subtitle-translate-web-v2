@@ -166,6 +166,8 @@ const en = {
     selectLanguage: "Select or type a language",
     customPrompt: "Custom Prompt",
     customPromptDefault: "Translate the following subtitle to {language}. Maintain the original tone, style, and nuances. Keep it concise to fit the subtitle timing.",
+    batchSize: "Batch Size (Subtitles per request)",
+    batchSizeDescription: "Larger batch finishes faster but uses more tokens per call (10 - 200)",
     startTranslation: "Start Translation",
     translationInProgress: "Translating subtitles...",
     translationPaused: "Paused - Press 'Continue' to resume translation",
