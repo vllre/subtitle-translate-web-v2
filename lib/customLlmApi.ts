@@ -362,11 +362,11 @@ export async function testCustomLlmConnection(): Promise<CustomLlmTestResult> {
   const headers = buildHeaders(apiKey, cfg.headers);
 
   const body = cfg.rawPromptMode
-    ? JSON.stringify({ model: cfg.model, prompt: "Hi", max_tokens: 5 })
+    ? JSON.stringify({ model: cfg.model, prompt: "Hi", max_tokens: 50 })
     : JSON.stringify({
         model: cfg.model,
-        messages: [{ role: "user", content: "Say OK" }],
-        max_tokens: 5,
+        messages: [{ role: "user", content: "Hello" }],
+        max_tokens: 50,
       });
 
   try {

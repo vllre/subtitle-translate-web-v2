@@ -12,10 +12,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Forward request from server-side (bypasses browser CORS & OPTIONS preflight)
+    const requestBody = typeof body === "string" ? body : JSON.stringify(body);
     const upstreamResponse = await fetch(endpoint, {
       method: "POST",
       headers: headers || {},
-      body: typeof body === "string" ? body : JSON.stringify(body),
+      body: requestBody,
     });
 
     const contentType = upstreamResponse.headers.get("content-type") || "";
