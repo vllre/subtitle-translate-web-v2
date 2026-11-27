@@ -184,12 +184,13 @@ export async function translateWithCustomLlmBatch(
   const headers = buildHeaders(apiKey, cfg.headers);
 
   const body = cfg.rawPromptMode
-    ? JSON.stringify({ model: cfg.model, prompt: batchPrompt, max_tokens: 8000 })
+    ? JSON.stringify({ model: cfg.model, prompt: batchPrompt, max_tokens: 8000, stream: false })
     : JSON.stringify({
         model: cfg.model,
         messages: [{ role: "user", content: batchPrompt }],
         temperature: 0.2,
         max_tokens: 8000,
+        stream: false,
       });
 
   try {
@@ -204,53 +205,36 @@ export async function translateWithCustomLlmBatch(
         }),
       });
 
+      const responseTextRaw = await response.text().catch(() => "");
+
       if (!response.ok) {
-        const rawText = await response.text().catch(() => "");
         let rawMsg: string;
-        if (rawText.trimStart().toLowerCase().startsWith("<!doctype") || rawText.trimStart().startsWith("<html")) {
+        if (responseTextRaw.trimStart().toLowerCase().startsWith("<!doctype") || responseTextRaw.trimStart().startsWith("<html")) {
           rawMsg = `HTTP ${response.status}: The server returned an HTML page — check your API Base URL (add /v1 if needed).`;
         } else {
           try {
-            const errData = JSON.parse(rawText);
+            const errData = JSON.parse(responseTextRaw);
             rawMsg = errData?.error?.message || errData?.message || errData?.detail || `HTTP ${response.status} ${response.statusText}`;
           } catch {
-            rawMsg = rawText.slice(0, 300) || `HTTP ${response.status} ${response.statusText}`;
+            rawMsg = responseTextRaw.slice(0, 300) || `HTTP ${response.status} ${response.statusText}`;
           }
         }
         return texts.map(() => ({ text: "", error: rawMsg }));
       }
 
-      const successText = await response.text().catch(() => "");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let data: any;
-      try {
-        data = JSON.parse(successText);
-      } catch {
-        if (successText.trimStart().toLowerCase().startsWith("<!doctype") || successText.trimStart().startsWith("<html")) {
-          return texts.map(() => ({
-            text: "",
-            error: "Server returned HTML instead of JSON — check your API Base URL (add /v1 if needed).",
-          }));
-        }
-        const snippet = successText.slice(0, 200);
+      if (responseTextRaw.trimStart().toLowerCase().startsWith("<!doctype") || responseTextRaw.trimStart().startsWith("<html")) {
         return texts.map(() => ({
           text: "",
-          error: `Invalid JSON response from server: "${snippet || "(empty response)"}"`,
+          error: "Server returned HTML instead of JSON — check your API Base URL (add /v1 if needed).",
         }));
       }
 
-      // OpenAI-compatible response
-      let responseText: string | undefined;
-      if (cfg.rawPromptMode) {
-        responseText = data?.choices?.[0]?.text?.trim();
-      } else {
-        responseText = data?.choices?.[0]?.message?.content?.trim();
-      }
+      const responseText = extractResponseContent(responseTextRaw, cfg.rawPromptMode);
 
       if (!responseText) {
         return texts.map(() => ({
           text: "",
-          error: "Empty response from Custom LLM",
+          error: `Empty or unparseable response from Custom LLM: "${responseTextRaw.slice(0, 150)}"`,
         }));
       }
 
@@ -301,7 +285,76 @@ Respond ONLY with a JSON object:
 {"translations": ["translation1", "translation2"]}`;
 }
 
-// ─── Response parser ──────────────────────────────────────────────────────────
+/**
+ * Extract text content from either:
+ * 1. OpenAI format: { choices: [{ message: { content } }] } or { choices: [{ text }] }
+ * 2. Gemini native format: { candidates: [{ content: { parts: [{ text }] } }] }
+ * 3. SSE Stream format: data: {"choices": [{"delta": {"content": "..."}}]}
+ */
+function extractResponseContent(rawText: string, rawPromptMode: boolean): string | undefined {
+  const trimmed = rawText.trim();
+
+  // 1. Check if response is SSE stream (starts with or contains "data: {")
+  if (trimmed.startsWith("data:") || trimmed.includes("\ndata:")) {
+    let accumulated = "";
+    const lines = trimmed.split("\n");
+    for (const line of lines) {
+      const match = line.trim().match(/^data:\s*(.+)$/);
+      if (!match) continue;
+      const dataStr = match[1].trim();
+      if (dataStr === "[DONE]") continue;
+      try {
+        const chunk = JSON.parse(dataStr);
+        // OpenAI chunk delta
+        const deltaContent = chunk?.choices?.[0]?.delta?.content;
+        if (deltaContent) accumulated += deltaContent;
+        // Text completion chunk
+        const textContent = chunk?.choices?.[0]?.text;
+        if (textContent) accumulated += textContent;
+        // Gemini candidate stream
+        const geminiText = chunk?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (geminiText) accumulated += geminiText;
+      } catch {
+        // Skip unparseable chunk lines
+      }
+    }
+    if (accumulated.trim()) {
+      return accumulated.trim();
+    }
+  }
+
+  // 2. Try parsing standard JSON
+  try {
+    const data = JSON.parse(trimmed);
+
+    // OpenAI Chat
+    if (data?.choices?.[0]?.message?.content) {
+      return String(data.choices[0].message.content).trim();
+    }
+
+    // OpenAI Completion / Raw prompt
+    if (data?.choices?.[0]?.text) {
+      return String(data.choices[0].text).trim();
+    }
+
+    // Gemini Native format: candidates[0].content.parts[0].text
+    if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+      return String(data.candidates[0].content.parts[0].text).trim();
+    }
+
+    // Any generic parts array
+    if (Array.isArray(data?.candidates?.[0]?.content?.parts)) {
+      const partsText = data.candidates[0].content.parts
+        .map((p: any) => p?.text || "")
+        .join("");
+      if (partsText.trim()) return partsText.trim();
+    }
+  } catch {
+    // If JSON parsing fails, fallback
+  }
+
+  return undefined;
+}
 
 function parseTranslationResponse(
   responseText: string,
@@ -366,11 +419,12 @@ export async function testCustomLlmConnection(): Promise<CustomLlmTestResult> {
   const headers = buildHeaders(apiKey, cfg.headers);
 
   const body = cfg.rawPromptMode
-    ? JSON.stringify({ model: cfg.model, prompt: "Hi", max_tokens: 50 })
+    ? JSON.stringify({ model: cfg.model, prompt: "Hi", max_tokens: 50, stream: false })
     : JSON.stringify({
         model: cfg.model,
         messages: [{ role: "user", content: "Hello" }],
         max_tokens: 50,
+        stream: false,
       });
 
   try {
@@ -384,17 +438,27 @@ export async function testCustomLlmConnection(): Promise<CustomLlmTestResult> {
       }),
     });
 
+    const rawText = await response.text().catch(() => "");
+
     if (!response.ok) {
-      const rawText = await response.text().catch(() => "");
       if (rawText.trimStart().toLowerCase().startsWith("<!doctype") || rawText.trimStart().startsWith("<html")) {
         return { success: false, error: `HTTP ${response.status}: Server returned HTML — check your API Base URL (add /v1 if needed).` };
       }
       try {
         const errData = JSON.parse(rawText);
-        return { success: false, error: errData?.error?.message || `HTTP ${response.status} ${response.statusText}` };
+        return { success: false, error: errData?.error?.message || errData?.message || errData?.detail || `HTTP ${response.status} ${response.statusText}` };
       } catch {
-        return { success: false, error: `HTTP ${response.status} ${response.statusText}` };
+        return { success: false, error: rawText.slice(0, 300) || `HTTP ${response.status} ${response.statusText}` };
       }
+    }
+
+    // Verify we can extract content or at least received valid response
+    const extracted = extractResponseContent(rawText, cfg.rawPromptMode);
+    if (!extracted && !rawText.includes('"stop"')) {
+      return {
+        success: false,
+        error: `Connected, but received unexpected format: ${rawText.slice(0, 150)}`,
+      };
     }
 
     return { success: true };
