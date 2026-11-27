@@ -184,13 +184,13 @@ export async function translateWithCustomLlmBatch(
   const headers = buildHeaders(apiKey, cfg.headers);
 
   const body = cfg.rawPromptMode
-    ? JSON.stringify({ model: cfg.model, prompt: batchPrompt, max_tokens: 8000, stream: false })
+    ? JSON.stringify({ model: cfg.model, prompt: batchPrompt, max_tokens: 8000, stream: true })
     : JSON.stringify({
         model: cfg.model,
         messages: [{ role: "user", content: batchPrompt }],
         temperature: 0.2,
         max_tokens: 8000,
-        stream: false,
+        stream: true,
       });
 
   try {
@@ -205,12 +205,15 @@ export async function translateWithCustomLlmBatch(
         }),
       });
 
-      const responseTextRaw = await response.text().catch(() => "");
-
       if (!response.ok) {
+        const responseTextRaw = await response.text().catch(() => "");
         let rawMsg: string;
-        if (responseTextRaw.trimStart().toLowerCase().startsWith("<!doctype") || responseTextRaw.trimStart().startsWith("<html")) {
-          rawMsg = `HTTP ${response.status}: The server returned an HTML page — check your API Base URL (add /v1 if needed).`;
+        const trimmedErr = responseTextRaw.trimStart().toLowerCase();
+        if (trimmedErr.startsWith("<!doctype") || trimmedErr.startsWith("<html")) {
+          rawMsg =
+            response.status === 524
+              ? "HTTP 524: Upstream server timed out (Cloudflare 524). Try reducing batch size or using a faster model."
+              : `HTTP ${response.status}: The server returned an HTML page — check your API Base URL (add /v1 if needed).`;
         } else {
           try {
             const errData = JSON.parse(responseTextRaw);
@@ -222,11 +225,18 @@ export async function translateWithCustomLlmBatch(
         return texts.map(() => ({ text: "", error: rawMsg }));
       }
 
+      const responseTextRaw = await readResponseText(response);
+
       if (responseTextRaw.trimStart().toLowerCase().startsWith("<!doctype") || responseTextRaw.trimStart().startsWith("<html")) {
         return texts.map(() => ({
           text: "",
           error: "Server returned HTML instead of JSON — check your API Base URL (add /v1 if needed).",
         }));
+      }
+
+      const streamError = extractStreamError(responseTextRaw);
+      if (streamError) {
+        return texts.map(() => ({ text: "", error: streamError }));
       }
 
       const responseText = extractResponseContent(responseTextRaw, cfg.rawPromptMode);
@@ -283,6 +293,63 @@ ${texts.map((text, index) => `${index + 1}. "${text}"`).join("\n")}
 
 Respond ONLY with a JSON object:
 {"translations": ["translation1", "translation2"]}`;
+}
+
+/**
+ * Read a fetch Response body incrementally when streaming SSE, or as plain text otherwise.
+ */
+async function readResponseText(response: Response): Promise<string> {
+  const contentType = response.headers.get("content-type")?.toLowerCase() || "";
+  if (!contentType.includes("text/event-stream") || !response.body) {
+    return response.text().catch(() => "");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder("utf-8");
+  let result = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      result += decoder.decode(value, { stream: true });
+    }
+    result += decoder.decode();
+  } finally {
+    reader.releaseLock();
+  }
+
+  return result;
+}
+
+/**
+ * Extract an error message if an SSE stream emitted an error event.
+ */
+function extractStreamError(rawText: string): string | undefined {
+  const trimmed = rawText.trim();
+  if (!trimmed.startsWith("data:") && !trimmed.includes("\ndata:")) {
+    return undefined;
+  }
+
+  for (const line of trimmed.split("\n")) {
+    const match = line.trim().match(/^data:\s*(.+)$/);
+    if (!match) continue;
+    const dataStr = match[1].trim();
+    if (dataStr === "[DONE]") continue;
+    try {
+      const chunk = JSON.parse(dataStr);
+      if (chunk?.error) {
+        return (
+          chunk.error.message ||
+          (typeof chunk.error === "string" ? chunk.error : JSON.stringify(chunk.error))
+        );
+      }
+    } catch {
+      // Ignore partial or non-JSON lines
+    }
+  }
+
+  return undefined;
 }
 
 /**
