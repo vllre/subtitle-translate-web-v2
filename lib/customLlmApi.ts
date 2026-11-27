@@ -126,9 +126,10 @@ function buildHeaders(
   apiKey: string,
   extraHeaders: CustomLlmHeader[]
 ): Record<string, string> {
+  const cleanKey = apiKey.trim().replace(/^Bearer\s+/i, "");
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${apiKey}`,
+    Authorization: `Bearer ${cleanKey}`,
   };
   for (const h of extraHeaders) {
     if (h.key.trim()) {
@@ -193,10 +194,14 @@ export async function translateWithCustomLlmBatch(
 
   try {
     return await rateLimiter.execute(async () => {
-      const response = await fetch(endpoint, {
+      const response = await fetch("/api/custom-llm", {
         method: "POST",
-        headers,
-        body,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          endpoint,
+          headers,
+          body,
+        }),
       });
 
       if (!response.ok) {
@@ -365,10 +370,14 @@ export async function testCustomLlmConnection(): Promise<CustomLlmTestResult> {
       });
 
   try {
-    const response = await fetch(endpoint, {
+    const response = await fetch("/api/custom-llm", {
       method: "POST",
-      headers,
-      body,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        endpoint,
+        headers,
+        body,
+      }),
     });
 
     if (!response.ok) {
