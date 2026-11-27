@@ -22,13 +22,30 @@ export async function POST(req: NextRequest) {
     const contentType = upstreamResponse.headers.get("content-type") || "";
     const rawText = await upstreamResponse.text();
 
-    if (contentType.includes("application/json")) {
-      try {
-        const jsonData = JSON.parse(rawText);
-        return NextResponse.json(jsonData, { status: upstreamResponse.status });
-      } catch {
-        // Fallback if parsing fails despite header
-      }
+    let parsedJson: any = null;
+    let isJson = false;
+
+    try {
+      parsedJson = JSON.parse(rawText);
+      isJson = true;
+    } catch {
+      isJson = false;
+    }
+
+    if (isJson) {
+      return NextResponse.json(parsedJson, { status: upstreamResponse.status });
+    }
+
+    // If upstream failed or returned non-JSON, return error format so client displays rawText clearly
+    if (!upstreamResponse.ok) {
+      return NextResponse.json(
+        {
+          error: {
+            message: `HTTP ${upstreamResponse.status}: ${rawText.slice(0, 500)}`,
+          },
+        },
+        { status: upstreamResponse.status }
+      );
     }
 
     return new NextResponse(rawText, {

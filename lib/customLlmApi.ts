@@ -212,9 +212,9 @@ export async function translateWithCustomLlmBatch(
         } else {
           try {
             const errData = JSON.parse(rawText);
-            rawMsg = errData?.error?.message || `HTTP ${response.status} ${response.statusText}`;
+            rawMsg = errData?.error?.message || errData?.message || errData?.detail || `HTTP ${response.status} ${response.statusText}`;
           } catch {
-            rawMsg = `HTTP ${response.status} ${response.statusText}`;
+            rawMsg = rawText.slice(0, 300) || `HTTP ${response.status} ${response.statusText}`;
           }
         }
         return texts.map(() => ({ text: "", error: rawMsg }));
@@ -232,7 +232,11 @@ export async function translateWithCustomLlmBatch(
             error: "Server returned HTML instead of JSON — check your API Base URL (add /v1 if needed).",
           }));
         }
-        return texts.map(() => ({ text: "", error: "Invalid JSON response from Custom LLM server" }));
+        const snippet = successText.slice(0, 200);
+        return texts.map(() => ({
+          text: "",
+          error: `Invalid JSON response from server: "${snippet || "(empty response)"}"`,
+        }));
       }
 
       // OpenAI-compatible response
