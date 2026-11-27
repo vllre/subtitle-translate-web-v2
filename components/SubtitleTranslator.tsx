@@ -1151,10 +1151,11 @@ export default function SubtitleTranslator() {
     // Làm mới danh sách các batch lỗi
     // Batch sukses (semua item translated), dihitung dari subtitles
     const successBatches = useMemo(() => {
+        const size = selectedBatchSize || BATCH_SIZE;
         const batches: { [key: number]: SubtitleItem[] } = {};
         subtitles.forEach(sub => {
             if (sub.status === "translated") {
-                const batchIndex = Math.floor((sub.id - 1) / BATCH_SIZE);
+                const batchIndex = Math.floor((sub.id - 1) / size);
                 if (!batches[batchIndex]) batches[batchIndex] = [];
                 batches[batchIndex].push(sub);
             }
@@ -1163,16 +1164,17 @@ export default function SubtitleTranslator() {
             .map(([batchIndex, items]) => ({ index: parseInt(batchIndex), items }))
             // Batch dianggap sukses penuh: tidak ada item lain di batch tsb yang error/translating
             .filter(b => {
-                const start = b.index * BATCH_SIZE + 1;
-                const end = start + BATCH_SIZE;
+                const start = b.index * size + 1;
+                const end = start + size;
                 return !subtitles.some(s => s.id >= start && s.id < end && s.status !== "translated");
             });
-    }, [subtitles]);
+    }, [subtitles, selectedBatchSize]);
 
     // Re-translate satu batch yang sudah berhasil diterjemahkan
     const handleRetranslateBatch = async (batchIndex: number) => {
-        const start = batchIndex * BATCH_SIZE + 1;
-        const end = start + BATCH_SIZE;
+        const size = selectedBatchSize || BATCH_SIZE;
+        const start = batchIndex * size + 1;
+        const end = start + size;
         const batchItems = subtitles.filter(s => s.id >= start && s.id < end);
         if (batchItems.length === 0) {
             console.warn(`Batch ${batchIndex} tidak ditemukan`);
