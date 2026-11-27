@@ -130,6 +130,9 @@ export default function SubtitleTranslator() {
     const [customLlmConfig, setCustomLlmConfig] = useState<CustomLlmConfig>(getCustomLlmConfig());
     const [selectedBatchSize, setSelectedBatchSize] = useState<number>(30);
 
+    // Effective batch size used for grouping/retry panels (falls back to BATCH_SIZE)
+    const effectiveBatchSize = selectedBatchSize || BATCH_SIZE;
+
     // Cập nhật pauseStateRef khi isPaused thay đổi
     useEffect(() => {
         pauseStateRef.current = isPaused;
@@ -872,7 +875,7 @@ export default function SubtitleTranslator() {
 
             // Tính toán batch index chính xác
             const firstSubtitleId = batch[0]?.id || 0;
-            const actualBatchIndex = Math.floor((firstSubtitleId - 1) / BATCH_SIZE);
+            const actualBatchIndex = Math.floor((firstSubtitleId - 1) / effectiveBatchSize);
 
             // Add to failed batches
             setFailedBatches(prev => {
@@ -881,7 +884,7 @@ export default function SubtitleTranslator() {
                     if (!existingBatch.items.length) return false;
 
                     const existingFirstId = existingBatch.items[0]?.id;
-                    const existingBatchIndex = Math.floor((existingFirstId - 1) / BATCH_SIZE);
+                    const existingBatchIndex = Math.floor((existingFirstId - 1) / effectiveBatchSize);
 
                     return existingBatchIndex === actualBatchIndex;
                 });
@@ -970,13 +973,13 @@ export default function SubtitleTranslator() {
 
                 // Nếu dịch thành công, kiểm tra xem phụ đề này có thuộc batch nào đã thất bại không
                 // và cập nhật trạng thái batch đó
-                const batchIndex = Math.floor(subtitleIndex / BATCH_SIZE);
+                const batchIndex = Math.floor(subtitleIndex / effectiveBatchSize);
                 const existingFailedBatchIndex = failedBatches.findIndex(b => b.index === batchIndex);
 
                 if (existingFailedBatchIndex !== -1) {
                     // Kiểm tra xem tất cả các phụ đề trong batch này đã được dịch thành công chưa
-                    const batchStart = batchIndex * BATCH_SIZE;
-                    const batchEnd = Math.min(batchStart + BATCH_SIZE, updatedSubtitles.length);
+                    const batchStart = batchIndex * effectiveBatchSize;
+                    const batchEnd = Math.min(batchStart + effectiveBatchSize, updatedSubtitles.length);
                     const allTranslated = updatedSubtitles
                         .slice(batchStart, batchEnd)
                         .every(s => s.status === "translated");
@@ -1151,7 +1154,7 @@ export default function SubtitleTranslator() {
     // Làm mới danh sách các batch lỗi
     // Batch sukses (semua item translated), dihitung dari subtitles
     const successBatches = useMemo(() => {
-        const size = selectedBatchSize || BATCH_SIZE;
+        const size = effectiveBatchSize;
         const batches: { [key: number]: SubtitleItem[] } = {};
         subtitles.forEach(sub => {
             if (sub.status === "translated") {
@@ -1168,11 +1171,11 @@ export default function SubtitleTranslator() {
                 const end = start + size;
                 return !subtitles.some(s => s.id >= start && s.id < end && s.status !== "translated");
             });
-    }, [subtitles, selectedBatchSize]);
+    }, [subtitles, effectiveBatchSize]);
 
     // Re-translate satu batch yang sudah berhasil diterjemahkan
     const handleRetranslateBatch = async (batchIndex: number) => {
-        const size = selectedBatchSize || BATCH_SIZE;
+        const size = effectiveBatchSize;
         const start = batchIndex * size + 1;
         const end = start + size;
         const batchItems = subtitles.filter(s => s.id >= start && s.id < end);
@@ -1215,7 +1218,7 @@ export default function SubtitleTranslator() {
         // Nhóm các subtitle lỗi theo batch
         subtitles.forEach(sub => {
             if (sub.status === "error") {
-                const batchIndex = Math.floor((sub.id - 1) / BATCH_SIZE);
+                const batchIndex = Math.floor((sub.id - 1) / effectiveBatchSize);
                 if (!errorBatches[batchIndex]) {
                     errorBatches[batchIndex] = [];
                 }
@@ -1253,7 +1256,7 @@ export default function SubtitleTranslator() {
         console.log("Current failedBatches:", failedBatches.map(b => ({
             index: b.index,
             firstId: b.items[0]?.id,
-            calculatedIndex: Math.floor((b.items[0]?.id - 1) / BATCH_SIZE)
+            calculatedIndex: Math.floor((b.items[0]?.id - 1) / effectiveBatchSize)
         })));
 
         // Tìm batch từ mảng failedBatches dựa vào batchIndex
@@ -1262,7 +1265,7 @@ export default function SubtitleTranslator() {
             if (!batch || batch.items.length === 0) return false;
 
             const firstItemId = batch.items[0]?.id;
-            const calculatedIndex = Math.floor((firstItemId - 1) / BATCH_SIZE);
+            const calculatedIndex = Math.floor((firstItemId - 1) / effectiveBatchSize);
 
             // So sánh trực tiếp calculated index với batchIndex được truyền vào
             return calculatedIndex === batchIndex;
@@ -1273,7 +1276,7 @@ export default function SubtitleTranslator() {
 
             // Cập nhật lại UI để không hiển thị các batch không còn tồn tại
             const batchExists = subtitles.some(sub => {
-                const subBatchIndex = Math.floor((sub.id - 1) / BATCH_SIZE);
+                const subBatchIndex = Math.floor((sub.id - 1) / effectiveBatchSize);
                 return subBatchIndex === batchIndex && sub.status === "error";
             });
 
@@ -1925,6 +1928,7 @@ Yêu cầu cụ thể cho mỗi phiên bản:
                                         failedBatches={failedBatches}
                                         onRetryBatch={handleRetryBatch}
                                         isProcessing={translating}
+                                        batchSize={effectiveBatchSize}
                                     />
                                 )}
 
@@ -2085,7 +2089,7 @@ Yêu cầu cụ thể cho mỗi phiên bản:
                                                 onUpdateSubtitle={handleUpdateSubtitle}
                                                 onRetranslateSingle={handleRetranslateSingle}
                                                 translating={translating}
-                                                batchSize={BATCH_SIZE}
+                                                batchSize={effectiveBatchSize}
                                                 highlightedSubtitleId={currentPlayingSubtitleId}
                                                 onSuggestTranslation={handleSuggestBetterTranslation}
                                             />

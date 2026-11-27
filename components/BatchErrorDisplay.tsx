@@ -10,12 +10,14 @@ interface BatchErrorDisplayProps {
   failedBatches: { index: number; items: SubtitleItem[] }[];
   onRetryBatch: (batchIndex: number) => Promise<void>;
   isProcessing: boolean;
+  batchSize?: number;
 }
 
 export default function BatchErrorDisplay({
   failedBatches,
   onRetryBatch,
   isProcessing,
+  batchSize = 10,
 }: BatchErrorDisplayProps) {
   const { t } = useI18n();
   const [retryingBatches, setRetryingBatches] = useState<number[]>([]);
@@ -31,14 +33,14 @@ export default function BatchErrorDisplay({
     console.log("BatchErrorDisplay: Current failedBatches:", failedBatches.map(b => ({
       index: b.index,
       firstId: b.items[0]?.id,
-      calcIndex: Math.floor((b.items[0]?.id - 1) / 10)
+      calcIndex: Math.floor((b.items[0]?.id - 1) / batchSize)
     })));
     
     // Kiểm tra batch có tồn tại trong danh sách hiện tại không
     const batchExists = failedBatches.some(batch => {
       if (!batch || !batch.items.length) return false;
       const firstId = batch.items[0]?.id || 0;
-      const calculatedBatchIndex = Math.floor((firstId - 1) / 10);
+      const calculatedBatchIndex = Math.floor((firstId - 1) / batchSize);
       console.log(`Check batch: firstId=${firstId}, calculatedIndex=${calculatedBatchIndex}, targetIndex=${batchIndex}`);
       return calculatedBatchIndex === batchIndex;
     });
@@ -67,7 +69,7 @@ export default function BatchErrorDisplay({
       .map(batch => {
         // Tính toán lại batchIndex từ ID đầu tiên của batch
         const firstId = batch.items[0]?.id || 0;
-        return Math.floor((firstId - 1) / 10); // 10 là giá trị mặc định cho BATCH_SIZE
+        return Math.floor((firstId - 1) / batchSize);
       });
     
     if (indicesToRetry.length === 0) {
@@ -133,7 +135,7 @@ export default function BatchErrorDisplay({
           const errorMessage = items[0]?.error || "Translation error occurred";
           
           // Tính toán lại batchIndex chính xác dựa trên ID đầu tiên của batch
-          const actualBatchIndex = Math.floor((firstId - 1) / 10); // 10 là giá trị mặc định cho BATCH_SIZE
+          const actualBatchIndex = Math.floor((firstId - 1) / batchSize);
           const isRetrying = retryingBatches.includes(actualBatchIndex);
           
           return (
