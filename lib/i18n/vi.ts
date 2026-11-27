@@ -206,6 +206,16 @@ const vi = {
     description: "Mỗi nhóm chứa tối đa 10 phụ đề. Thử lại các nhóm thất bại để hoàn thành việc dịch.",
     retryBatch: "Thử lại nhóm"
   },
+  batchSuccessDisplay: {
+    successBatches: "{count} {batches} hoàn thành",
+    batch: "nhóm",
+    batches: "nhóm",
+    description: "Dịch lại nhóm đã hoàn thành nếu bạn muốn kết quả dịch khác.",
+    retranslateBatch: "Dịch lại",
+    retranslateAll: "Dịch lại tất cả",
+    retranslating: "Đang dịch lại...",
+    itemCount: "{count} phụ đề"
+  },
   errors: {
     apiKeyRequired: "Cần có khóa API. Vui lòng cung cấp khóa API Gemini hợp lệ.",
     fileRequired: "Vui lòng chọn tệp SRT để dịch.",

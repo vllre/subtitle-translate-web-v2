@@ -205,6 +205,16 @@ const id = {
     description: "Setiap batch berisi hingga 10 subtitle. Coba lagi batch yang gagal untuk menyelesaikan proses terjemahan.",
     retryBatch: "Coba Lagi Batch"
   },
+  batchSuccessDisplay: {
+    successBatches: "{count} {batches} selesai",
+    batch: "batch",
+    batches: "batch",
+    description: "Terjemahkan ulang batch yang sudah selesai jika ingin hasil terjemahan berbeda.",
+    retranslateBatch: "Terjemahkan Ulang",
+    retranslateAll: "Terjemahkan Ulang Semua",
+    retranslating: "Menerjemahkan ulang...",
+    itemCount: "{count} subtitle"
+  },
   errors: {
     apiKeyRequired: "Kunci API diperlukan. Harap berikan kunci API Gemini yang valid.",
     fileRequired: "Silakan pilih file SRT untuk diterjemahkan.",

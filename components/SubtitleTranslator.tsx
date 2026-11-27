@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { translateWithGemini, setApiKey, getApiKey, setModel, getModel } from "@/lib/geminiApi";
 import type { TranslationResult } from "@/lib/geminiApi";
 import { translateWithOpenRouter, translateWithOpenRouterBatch, setOpenRouterApiKey as saveOpenRouterApiKey, getOpenRouterApiKey, setOpenRouterModel as saveOpenRouterModel, getOpenRouterModel, getOpenRouterModels } from "@/lib/openrouterApi";
@@ -23,6 +23,7 @@ import {
 } from "@/lib/customLlmApi";
 import ClientOnly from "@/components/ClientOnlyComponent";
 import BatchErrorDisplay from "@/components/BatchErrorDisplay";
+import BatchSuccessDisplay from "@/components/BatchSuccessDisplay";
 import TokenEstimatorDisplay from "@/components/TokenEstimatorDisplay";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -99,6 +100,7 @@ export default function SubtitleTranslator() {
     const [selectedModel, setSelectedModel] = useState<string>(getModel());
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [failedBatches, setFailedBatches] = useState<{ index: number; items: SubtitleItem[] }[]>([]);
+    const [retranslatingSuccessBatches, setRetranslatingSuccessBatches] = useState<Set<number>>(new Set());
     const [isSettingsCollapsed, setIsSettingsCollapsed] = useState<boolean>(false);
     const [isSubtitleTableCollapsed, setIsSubtitleTableCollapsed] = useState<boolean>(false);
     const [isPaused, setIsPaused] = useState<boolean>(false);
@@ -1147,6 +1149,63 @@ export default function SubtitleTranslator() {
     };
 
     // Làm mới danh sách các batch lỗi
+    // Batch sukses (semua item translated), dihitung dari subtitles
+    const successBatches = useMemo(() => {
+        const batches: { [key: number]: SubtitleItem[] } = {};
+        subtitles.forEach(sub => {
+            if (sub.status === "translated") {
+                const batchIndex = Math.floor((sub.id - 1) / BATCH_SIZE);
+                if (!batches[batchIndex]) batches[batchIndex] = [];
+                batches[batchIndex].push(sub);
+            }
+        });
+        return Object.entries(batches)
+            .map(([batchIndex, items]) => ({ index: parseInt(batchIndex), items }))
+            // Batch dianggap sukses penuh: tidak ada item lain di batch tsb yang error/translating
+            .filter(b => {
+                const start = b.index * BATCH_SIZE + 1;
+                const end = start + BATCH_SIZE;
+                return !subtitles.some(s => s.id >= start && s.id < end && s.status !== "translated");
+            });
+    }, [subtitles]);
+
+    // Re-translate satu batch yang sudah berhasil diterjemahkan
+    const handleRetranslateBatch = async (batchIndex: number) => {
+        const start = batchIndex * BATCH_SIZE + 1;
+        const end = start + BATCH_SIZE;
+        const batchItems = subtitles.filter(s => s.id >= start && s.id < end);
+        if (batchItems.length === 0) {
+            console.warn(`Batch ${batchIndex} tidak ditemukan`);
+            return;
+        }
+
+        setRetranslatingSuccessBatches(prev => new Set(prev).add(batchIndex));
+        try {
+            trackEvent('retranslate_batch', { batchIndex, itemCount: batchItems.length });
+
+            if (!abortControllerRef.current || abortControllerRef.current.signal.aborted) {
+                abortControllerRef.current = new AbortController();
+            }
+
+            const updatedSubtitles = [...subtitles];
+            batchItems.forEach(item => {
+                const idx = updatedSubtitles.findIndex(s => s.id === item.id);
+                if (idx !== -1) {
+                    updatedSubtitles[idx] = { ...updatedSubtitles[idx], status: "translating", error: undefined };
+                }
+            });
+            setSubtitles(updatedSubtitles);
+
+            await processBatchWithContext(batchItems, updatedSubtitles);
+        } finally {
+            setRetranslatingSuccessBatches(prev => {
+                const next = new Set(prev);
+                next.delete(batchIndex);
+                return next;
+            });
+        }
+    };
+
     const refreshFailedBatches = () => {
         // Lọc lại các batch lỗi dựa trên trạng thái hiện tại của subtitles
         const errorBatches: { [key: number]: SubtitleItem[] } = {};
@@ -1864,6 +1923,15 @@ Yêu cầu cụ thể cho mỗi phiên bản:
                                         failedBatches={failedBatches}
                                         onRetryBatch={handleRetryBatch}
                                         isProcessing={translating}
+                                    />
+                                )}
+
+                                {/* Batch Success Display (re-translate successful batches) */}
+                                {successBatches.length > 0 && (
+                                    <BatchSuccessDisplay
+                                        successBatches={successBatches}
+                                        onRetranslateBatch={handleRetranslateBatch}
+                                        isProcessing={translating || retranslatingSuccessBatches.size > 0}
                                     />
                                 )}
 

@@ -205,6 +205,16 @@ const en = {
     description: "Each batch contains up to 10 subtitles. Retry failed batches to complete the translation.",
     retryBatch: "Retry Batch"
   },
+  batchSuccessDisplay: {
+    successBatches: "{count} completed {batches}",
+    batch: "batch",
+    batches: "batches",
+    description: "Re-translate a completed batch if you want a different translation result.",
+    retranslateBatch: "Re-translate",
+    retranslateAll: "Re-translate All",
+    retranslating: "Re-translating...",
+    itemCount: "{count} subtitles"
+  },
   errors: {
     apiKeyRequired: "API key is required. Please provide a valid Gemini API key.",
     fileRequired: "Please select an SRT file to translate.",
